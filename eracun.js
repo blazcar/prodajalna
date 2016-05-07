@@ -63,10 +63,16 @@ streznik.get('/', function(zahteva, odgovor) {
     if (napaka)
       odgovor.sendStatus(500);
     else {
+      if(!zahteva.session.stranka){
+        odgovor.redirect("/prijava");
+      }
+      else{
         for (var i=0; i<vrstice.length; i++)
           vrstice[i].stopnja = davcnaStopnja(vrstice[i].izvajalec, vrstice[i].zanr);
         odgovor.render('seznam', {seznamPesmi: vrstice});
+      
       }
+    }
   })
 })
 
@@ -233,13 +239,17 @@ streznik.post('/stranka', function(zahteva, odgovor) {
   var form = new formidable.IncomingForm();
   
   form.parse(zahteva, function (napaka1, polja, datoteke) {
-    odgovor.redirect('/')
+      zahteva.session.stranka = polja.seznamStrank;
+      if(zahteva.session.stranka){
+        odgovor.redirect('/')
+      }
   });
 })
 
 // Odjava stranke
 streznik.post('/odjava', function(zahteva, odgovor) {
-    odgovor.redirect('/prijava') 
+    zahteva.session.stranka = "";
+    odgovor.redirect('/prijava') ;
 })
 
 
