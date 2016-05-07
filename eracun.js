@@ -153,27 +153,29 @@ streznik.post('/izpisiRacunBaza', function(zahteva, odgovor) {
 
 // Izpis računa v HTML predstavitvi ali izvorni XML obliki
 streznik.get('/izpisiRacun/:oblika', function(zahteva, odgovor) {
-  kateraStrankaJeIzbrana(zahteva, function(stranka){
-    console.log("To je id customerja " + zahteva.session.CustomerId);
-    if(!stranka){
+  pesmiIzKosarice(zahteva, function(pesmi) {
+    if (!pesmi) {
       odgovor.sendStatus(500);
-    }
-    else {
-      pesmiIzKosarice(zahteva, function(pesmi) {
-         if (!pesmi) {
-           odgovor.sendStatus(500);
-         } else if (pesmi.length == 0) {
-           odgovor.send("<p>V košarici ni pesmi, zato računa ni moč pripraviti!</p>");
-         } else {
+    } else if (pesmi.length == 0) {
+      odgovor.send("<p>V košarici nimate nobene pesmi, \
+                    zato računa ni mogoče pripraviti!</p>");
+    } else {
+      kateraStrankaJeIzbrana(zahteva.session.stevilkaPrijavljenegaGosta, function(napaka, stranke){
+        if(napaka){
+          odgovor.end();  
+        }
+        else{
           odgovor.setHeader('content-type', 'text/xml');
-          odgovor.render('eslog', {
-          vizualiziraj: zahteva.params.oblika == 'html' ? true : false,
-          postavkeRacuna: pesmi,
-          strankica: stranka[0]
-          })  
-         }
-       })
+            odgovor.render('eslog', {
+              vizualiziraj: zahteva.params.oblika == 'html' ? true : false,
+              postavkeRacuna: pesmi,
+              strankica: stranke[0]
+            });
+        }
+        
+      });
     }
+      
   })
 })
 
@@ -191,11 +193,10 @@ var vrniStranke = function(callback) {
   );
 }
 
-var kateraStrankaJeIzbrana = function(zahteva, callback){
-  pb.all("SELECT * FROM Customer \
-          WHERE CustomerId = " + zahteva.session.CustomerId,
+var kateraStrankaJeIzbrana = function(id, callback){
+  pb.all("SELECT * FROM Customer WHERE Customer.CustomerId = " + id,
     function(napaka, vrstice) {
-        console.log(vrstice);
+        //console.log(vrstice);
         callback(napaka, vrstice);
     }
   );
@@ -253,6 +254,7 @@ streznik.post('/stranka', function(zahteva, odgovor) {
   var form = new formidable.IncomingForm();
   
   form.parse(zahteva, function (napaka1, polja, datoteke) {
+    zahteva.session.stevilkaPrijavljenegaGosta = polja.seznamStrank;
     odgovor.redirect('/')
   });
 })
